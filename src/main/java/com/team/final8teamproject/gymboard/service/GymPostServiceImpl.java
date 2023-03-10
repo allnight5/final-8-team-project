@@ -29,7 +29,6 @@ public class GymPostServiceImpl implements GymPostService {
 
     //1.헬스장 게시글 작성
     @Override
-    @Transactional
     public String createGymPost(CreatePostGymRequestDto requestDto,
                                 String imgUrl,
                                 String username){
@@ -111,7 +110,6 @@ public class GymPostServiceImpl implements GymPostService {
     }
     //6. 헬스장 게시글 수정
     @Override
-    @Transactional
     public void updateGymPost(GymUpdateRequestDto requestDto,String imageUrl, String username, Long id) {
         GymBoard gymBoard = gymBoardRepository.findByIdAndUsername(id, username).orElseThrow(
                 () -> new IllegalArgumentException("게시글이 존재하지 않습니다.")
@@ -138,7 +136,6 @@ public class GymPostServiceImpl implements GymPostService {
 
     //8.가격 할인 업데이트
     @Override
-    @Transactional
     public String discountUpdate(Long id, String discount, String username){
         GymBoard gymBoard = gymBoardRepository.findByIdAndUsername(id, username).orElseThrow(
                 () -> new IllegalArgumentException("게시글이 존재하지 않습니다.")
@@ -148,7 +145,6 @@ public class GymPostServiceImpl implements GymPostService {
     }
     //8.가격 할인 업데이트
     @Override
-    @Transactional
     public String deleteUpdate(Long id, String discount, String username){
         GymBoard gymBoard = gymBoardRepository.findByIdAndUsername(id, username).orElseThrow(
                 () -> new IllegalArgumentException("게시글이 존재하지 않습니다.")
@@ -157,7 +153,6 @@ public class GymPostServiceImpl implements GymPostService {
         return "할인적용";
     }
     //10. 가격 변경
-    @Transactional
     public String priceUpdate(Long id, String price, String username){
         GymBoard gymBoard = gymBoardRepository.findByIdAndUsername(id, username).orElseThrow(
                 () -> new IllegalArgumentException("게시글이 존재하지 않습니다.")
@@ -165,7 +160,6 @@ public class GymPostServiceImpl implements GymPostService {
         gymBoard.priceUpdate(price);
         return "변경완료";
     }
-    @Transactional
     public String imageUpdate(Long id, String imageUrl, String username){
         GymBoard gymBoard = gymBoardRepository.findByIdAndUsername(id, username).orElseThrow(
                 () -> new IllegalArgumentException("게시글이 존재하지 않습니다.")

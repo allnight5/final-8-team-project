@@ -15,7 +15,6 @@ public class CreatePostGymRequestDto {
     private final String ownerNumber;
     private final String gymName;
     private final String region;
-    private final String image;
     private final String openTime;
     private final String amenities;
     private final String amenitiesDetail;

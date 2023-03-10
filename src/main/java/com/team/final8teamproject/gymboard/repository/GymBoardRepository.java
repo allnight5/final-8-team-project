@@ -19,6 +19,8 @@ public interface GymBoardRepository extends JpaRepository<GymBoard, Long> {
     Optional<GymBoard> findById(Long id);
     Optional<GymBoard> findByIdAndUsername(Long id, String username);
     Page<GymBoard> findByUsername(Pageable pageable, String username);
+
+    Optional<GymBoard> findByUsername(String username);
     void deleteById(Long id);
 
 }

@@ -62,7 +62,7 @@ public class GeneralManagerServiceImpl implements GeneralManagerService {
         if(redisUtil.hasKey("RT:" +manager.getUsername())){
             throw new SecurityException("이미 접속중인 사용자 입니다.");
         }
-        redisUtil.setRefreshToken("RT:" +manager.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
+//        redisUtil.setRefreshToken("RT:" +manager.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
         return loginResponseDto;
     }
     //관리자 조회

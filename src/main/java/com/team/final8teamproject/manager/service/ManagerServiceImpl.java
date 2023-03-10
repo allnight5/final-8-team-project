@@ -96,7 +96,7 @@ public class ManagerServiceImpl implements ManagerService {
 //        if(redisUtil.hasKey("RT:" +user.getUsername())){
 //            throw new SecurityException("이미 접속중인 사용자 입니다.");
 //        }
-        redisUtil.setRefreshToken("RT:" + user.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
+//        redisUtil.setRefreshToken(user.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
 
         return loginResponseDto;
     }

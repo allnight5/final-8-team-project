@@ -23,9 +23,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ProfileServiceImpl implements ProfileService {
     private final UserRepository userRepository;
-
     private final ManagerRepository managerRepository;
-
     private final PasswordEncoder passwordEncoder;
     private final KakaoRepository kakaoRepository;
 

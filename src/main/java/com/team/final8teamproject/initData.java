@@ -43,15 +43,15 @@ public class initData implements ApplicationRunner {
   //    private final ContactCommentRepository contactCommentRepository;
   private final NoticeRepository noticeRepository;
 
-//  private final T_exerciseRepository tExerciseRepository;
-//
-//  private final T_exerciseLikeRepository tExerciseLikeRepository;
-//
-//  private final ContactCommentRepository contactCommentRepository;
-//  private final GymBoardRepository gymBoardRepository;
-//  private final GymReviewRepository gymReviewRepository;
-//  private final ManagerRepository managerRepository;
-//
+  private final T_exerciseRepository tExerciseRepository;
+
+  private final T_exerciseLikeRepository tExerciseLikeRepository;
+
+  private final ContactCommentRepository contactCommentRepository;
+  private final GymBoardRepository gymBoardRepository;
+  private final GymReviewRepository gymReviewRepository;
+  private final ManagerRepository managerRepository;
+
   @Override
   @Transactional
   public void run(ApplicationArguments args) throws Exception {

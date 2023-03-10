@@ -87,26 +87,23 @@ public class OwnerService {
         if (!passwordEncoder.matches(password, base.getPassword())){
             throw new SecurityException("사용자를 찾을수 없습니다.");
         }
-//        String refreshToken = (String)redisUtil.getRefreshToken("RT:" +base.getUsername());
-//        if(!ObjectUtils.isEmpty(refreshToken)){
-//            throw new IllegalArgumentException("이미 로그인 되어 있습니다..");
-//        }
         LoginResponseDto loginResponseDto =jwtUtil.createUserToken(base.getUsername(), base.getRole());
-
-        redisUtil.setRefreshToken("RT:" +base.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
-
+        SetRedisRefreshToken refreshToken = new SetRedisRefreshToken(loginResponseDto.getRefreshToken(), base.getUsername(), base.getRole());
+        redisUtil.setRefreshToken(loginResponseDto.getAccessToken(), refreshToken, loginResponseDto.getRefreshTokenExpirationTime());
         return loginResponseDto;
+//        redisUtil.setRefreshToken(base.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
+
     }
 
     //3. 로그아웃
     public String logout(String accessToken, String username) {
 
         // refreshToken 테이블의 refreshToken 삭제
-        redisUtil.deleteRefreshToken("RT:" + username);
+        redisUtil.deleteRefreshToken(username);
 //        refreshTokenRepository.deleteRefreshTokenByEmail(users.getEmail());
 
         // 레디스에 accessToken 사용못하도록 등록
-        redisUtil.setBlackList("RT:"+accessToken, "accessToken", 5L);
+        redisUtil.setBlackList(accessToken, "accessToken", 5L);
 
         return "로그아웃 완료";
     }

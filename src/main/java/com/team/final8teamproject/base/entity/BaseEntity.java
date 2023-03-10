@@ -70,9 +70,13 @@ public class BaseEntity extends Timestamped {
         return this.id.equals(userid);
     }
 
+    public boolean isUsername(String username){ return this.username.equals(username);}
+
+    public boolean isEmail(String email){return this.email.equals(email);}
     public String getWriterName() {
         return this.username;
     }
+
 
     public void approvalManager(UserRoleEnum role) {
         this.role = role;

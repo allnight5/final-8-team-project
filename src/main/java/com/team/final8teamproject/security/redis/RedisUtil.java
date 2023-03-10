@@ -1,8 +1,10 @@
 package com.team.final8teamproject.security.redis;
 
+import com.team.final8teamproject.user.dto.SetRedisRefreshToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.security.oauth2.provider.client.Jackson2ArrayOrStringDeserializer;
 import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 

@@ -1,5 +1,7 @@
 package com.team.final8teamproject.security.jwt;
 
+import com.team.final8teamproject.base.entity.BaseEntity;
+import com.team.final8teamproject.security.redis.RedisUtil;
 import com.team.final8teamproject.user.dto.LoginResponseDto;
 import com.team.final8teamproject.user.entity.UserRoleEnum;
 import com.team.final8teamproject.security.service.UserDetailsServiceImpl;
@@ -17,7 +19,7 @@ import org.springframework.util.StringUtils;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
@@ -29,11 +31,14 @@ public class JwtUtil {
 
     private final UserDetailsServiceImpl userDetailsService;
 
+    private final RedisUtil redisUtil;
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String AUTHORIZATION_KEY = "auth";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final long ACCESS_TOKEN_TIME = 60 * 60 * 1000L;            // 30분
-    private static final long REFRESH_TOKEN_EXPIRE_TIME = 7 * 24 * 60 * 60 * 1000L; //7일
+
+//    private static final long ACCESS_TOKEN_TIME = 60 * 1000L;
+    private static final long REFRESH_TOKEN_EXPIRE_TIME = 24 * 60 * 60 * 1000L; //7일
 
     @Value("${jwt.secret.key}")
     private String secretKey;
@@ -71,20 +76,6 @@ public class JwtUtil {
                 .claim(AUTHORIZATION_KEY, role), date);
     }
 
-    //카카오 토큰 생성
-//    public String createToken(String username, UserRoleEnum role) {
-//        Date date = new Date();
-//
-//        return BEARER_PREFIX +
-//                Jwts.builder()
-//                        .setSubject(username)
-//                        .claim(AUTHORIZATION_KEY, role)
-//                        .setExpiration(new Date(date.getTime() + ACCESS_TOKEN_TIME))
-//                        .setIssuedAt(date)
-//                        .signWith(key, signatureAlgorithm)
-//                        .compact();
-//    }
-
 
     // 총관리자, 관리자 가지고 AccessToken, RefreshToken 을 반환해주는 메서드
     public LoginResponseDto createManagerToken(String general, UserRoleEnum role) {
@@ -96,7 +87,24 @@ public class JwtUtil {
                 .claim(AUTHORIZATION_KEY, role), date);
     }
 
+    // 토큰 제발급
     //토큰(AccessToken, RefreshToken) 생성 메서드
+    public String reCreateUserToken(String username, UserRoleEnum role) {
+        Date date = new Date();
+        //권한 가져오기
+        // BEARER : 인증 타입중 하나로 JWT 또는 OAuth에 대한 토큰을 사용 (RFC 6750 문서 확인)
+        return BEARER_PREFIX + Jwts.builder()
+                .setSubject(username)
+                .claim(AUTHORIZATION_KEY, role)
+                .setExpiration(new Date(date.getTime() + ACCESS_TOKEN_TIME))
+                .setIssuedAt(date)
+                .signWith(key, signatureAlgorithm)
+                .compact();
+    }
+    public BaseEntity AuthenticatedUser(String username) {
+        return userDetailsService.loadUserByUsernameUseRefreshToken(username);
+    }
+
     private LoginResponseDto getLoginResponseDto(JwtBuilder general, Date date) {
         String accessToken = BEARER_PREFIX + general // payload에 들어갈 정보 조각들
                 .setExpiration(new Date(date.getTime() + ACCESS_TOKEN_TIME)) // 만료시간 설정
@@ -128,9 +136,15 @@ public class JwtUtil {
 
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
-    //오너 유저 인증 객체 생성
 
+    //토큰 재발급을 위한 토큰 검색
 
+    public String getAuthenticationByAccessToken(String accessToken) {
+        String changeToken = accessToken.substring(7);
+        String userPrincipal = Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(changeToken).getBody().getSubject();
+        UserDetails userDetails = userDetailsService.loadUserByUsername(userPrincipal);
+        return userDetails.getUsername();
+    }
 
     /**
      *  -----------------------------------------------
@@ -150,18 +164,13 @@ public class JwtUtil {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
-        } catch (SecurityException | MalformedJwtException e) {// 전: 권한 없다면 발생 , 후: JWT가 올바르게 구성되지 않았다면 발생
+        } catch (SecurityException | MalformedJwtException | UnsupportedJwtException e) {// 전: 권한 없다면 발생 , 후: JWT가 올바르게 구성되지 않았다면 발생
             log.info("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
 
         } catch (ExpiredJwtException e) {// JWT만료
             log.info("Expired JWT token, 만료된 JWT token 입니다.");
-
-        } catch (UnsupportedJwtException e) {
-            log.info("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
-
         } catch (IllegalArgumentException e) {
             log.info("JWT claims is empty, 잘못된 JWT 토큰 입니다.");
-
         }
         return false;
     }
@@ -177,5 +186,8 @@ public class JwtUtil {
         // 현재 시간
         Long now = new Date().getTime();
         return (expiration.getTime() - now);
+    }
+    public boolean getRefreshTokenIsTrue(String username) {
+        return redisUtil.hasKey(username);
     }
 }

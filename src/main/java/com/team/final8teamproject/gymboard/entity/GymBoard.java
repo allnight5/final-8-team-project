@@ -73,6 +73,17 @@ public class GymBoard extends Timestamped {
         this.price = price;
         this.rating =0L;
     }
+    public GymBoard(String gymName, String address, String price, String discount, String username){
+        this.title = "test";
+        this.ownerNumber= "test";
+        this.content = "test";
+        this.gymName = gymName;
+        this.region = address;
+        this.price = price;
+        this.discount = discount;
+        this.username = username;
+
+    }
     public void update(GymUpdateRequestDto gymUpdateRequestDto, String imageUrl){
          if(gymUpdateRequestDto.getTitle() != null) {
              this.title = gymUpdateRequestDto.getTitle();

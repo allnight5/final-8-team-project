@@ -1,5 +1,6 @@
 package com.team.final8teamproject.user.service;
 
+import com.amazonaws.thirdparty.jackson.databind.ObjectMapper;
 import com.team.final8teamproject.base.entity.BaseEntity;
 import com.team.final8teamproject.base.repository.BaseRepository;
 import com.team.final8teamproject.security.redis.RedisUtil;
@@ -15,14 +16,21 @@ import jakarta.mail.internet.MimeMessage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.team.final8teamproject.security.jwt.JwtUtil;
 
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
+
+import static com.team.final8teamproject.share.exception.ExceptionStatus.*;
 
 @Slf4j
 @Service
@@ -36,6 +44,7 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
+    private final RedisTemplate<String, Object> redisTemplate;
     //1. 회원가입
     @Transactional
     public MessageResponseDto signUp(@Valid SignupRequestDto signupRequestDto) {
@@ -92,8 +101,8 @@ public class UserService {
             throw new CustomException(ExceptionStatus.WRONG_USERNAME);
         }
         LoginResponseDto loginResponseDto = jwtUtil.createUserToken(user.getUsername(), user.getRole());
-
-        redisUtil.setRefreshToken("RT:" + user.getUsername(), loginResponseDto.getRefreshToken(), loginResponseDto.getRefreshTokenExpirationTime());
+        SetRedisRefreshToken refreshToken = new SetRedisRefreshToken(loginResponseDto.getRefreshToken(), user.getUsername(), user.getRole());
+        redisUtil.setRefreshToken(loginResponseDto.getAccessToken(), refreshToken, loginResponseDto.getRefreshTokenExpirationTime());
         return loginResponseDto;
     }
 
@@ -106,8 +115,8 @@ public class UserService {
         Long expiration = jwtUtil.getExpiration(accessToken);
         redisUtil.setBlackList(accessToken, "logout", expiration);
 
-        if (redisUtil.hasKey("RT:" + username)) {
-            redisUtil.deleteRefreshToken("RT:" + username);
+        if (redisUtil.hasKey(username)) {
+            redisUtil.deleteRefreshToken(username);
         } else {
             throw new IllegalArgumentException("이미 로그아웃한 유저입니다.");
         }
@@ -133,16 +142,14 @@ public class UserService {
         BaseEntity user = baseRepository.findByEmail(vo.getEmail()).orElseThrow(
                 () -> new IllegalArgumentException("이메일을 다시 입력해주시기 바랍니다.")
         );
-
         // 가입된 아이디가 없으면
-        if (!user.getUsername().equals(vo.getUsername())) {
+        if (user.isUsername(vo.getUsername())) {
             throw new IllegalArgumentException("등록되지 않은 사용자입니다.");
         }
 
         // 가입된 이메일이 아니면
-        else if (!vo.getEmail().equals(user.getEmail())) {
+        else if (user.isEmail(vo.getEmail())) {
             throw new IllegalArgumentException("등록되지 않은 사용자입니다.");
-
         } else {
 
             // 임시 비밀번호 생성
@@ -159,6 +166,7 @@ public class UserService {
     }
 
     //5-1.이메일 발송
+    @Async
     public void sendEmail(FindPasswordRequestDto vo, String password) {
         // Mail Server 설정
         MimeMessage mail = mailSender.createMimeMessage();
@@ -180,7 +188,45 @@ public class UserService {
             e.printStackTrace();
         }
     }
+    //6. 엑세스 토큰 재발급
 
+    /**
+     *
+     * @param requestDto 만료되어 받아오는 access토큰
+     * @return
+     * 서버 DB조회없이 redis에서 조회해온 데이터를 이용하여 처리
+     * 여기서 문제 하루동안 접속을 안하거나
+     * 하루종일 있다면 한명이 최대 48개의 redis칸을 차지함
+     * 그로인하여 속도 저하도 있을 수 있다.
+     * 그렇게 되면 DB조회하는것과 redis만 이용 하는것 둘중 뭐가 좋은지.. 애매하다.
+     */
+    @Transactional
+    public ResponseEntity<String> regenerateToken(
+            RegenerateTokenRequestDto requestDto){
+        try{
+            if(!redisUtil.hasKey(requestDto.getAccessToken())){
+                throw new CustomException(NOT_FOUNT_TOKEN);
+            }
+            Object redisToken = redisUtil.getRefreshToken(requestDto.getAccessToken());
+            if(redisToken instanceof SetRedisRefreshToken){
+                long REFRESH_TOKEN_EXPIRE_TIME = 24 * 60 * 60 * 1000L; //1일
+                SetRedisRefreshToken refreshToken = (SetRedisRefreshToken)redisToken;
+                String reToken = jwtUtil.reCreateUserToken(refreshToken.getUsername(),
+                        refreshToken.getRole());
+                RegenerateTokenResponseDto tokenResponseDto
+                        = new RegenerateTokenResponseDto(reToken);
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.add(JwtUtil.AUTHORIZATION_HEADER,tokenResponseDto.getAccessToken());
+                redisUtil.setRefreshToken(reToken, refreshToken,REFRESH_TOKEN_EXPIRE_TIME);
+                redisUtil.setBlackList(requestDto.getAccessToken(), null,REFRESH_TOKEN_EXPIRE_TIME);
+                return new ResponseEntity<>("생성성공", httpHeaders, HttpStatus.OK);
+            }
+            throw new CustomException(NOT_FOUNT_TOKEN);
+        }catch (AuthenticationException e) {
+            throw new CustomException(NOT_FOUNT_TOKEN);
+        }
+
+    }
     public String getUserNickname(BaseEntity base) {
         String username = base.getUsername();
         BaseEntity user = baseRepository.findByUsername(username).orElseThrow(() -> new CustomException(ExceptionStatus.WRONG_USERNAME));

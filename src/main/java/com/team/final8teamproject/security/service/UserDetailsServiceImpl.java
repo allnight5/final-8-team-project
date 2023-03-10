@@ -26,4 +26,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         return new UserDetailsImpl(base, base.getUsername());
     }
 
+    public BaseEntity loadUserByUsernameUseRefreshToken(String username) {
+        return baseRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found "));
+    }
 }
